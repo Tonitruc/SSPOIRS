@@ -4,7 +4,7 @@ void log_message(const char* fileName, const char* level, const char* message) {
 
     FILE* f = fopen(fileName, "a");
     if (f == NULL) {
-        close(f);
+        fclose(f);
         perror("Error opening log file.\n");
         exit(errno);
     }

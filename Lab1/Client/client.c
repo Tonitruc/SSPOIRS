@@ -56,7 +56,7 @@ void start_client(int* cfd, const char* serverName) {
             continue;
         } else {
             log_message(LOG_FILE, LOG_CRITICAL, "Server connection error");
-            close(cfd);
+            close(*cfd);
             exit(errno);
         }
     }
@@ -67,19 +67,19 @@ void upload(int cfd, const char* command) {
     log_message(LOG_FILE, LOG_INFO, "Start upload file to server");
     unsigned char buffer[80];
     int fileSize = -1, sent = 0, bytesRead;
-    char* file = command + 7;
+    const char* file = command + 7;
 
     FILE* f = fopen(file, "rb");
     if (f == NULL) {
         log_message(LOG_FILE, LOG_CRITICAL, "Can't open file to send data to server");
-        close(f);
+        fclose(f);
         return;
     }
 
     write(cfd, command, sizeof(command));
     if (read(cfd, &fileSize, sizeof(fileSize)) >= 0 && fileSize == -1) {
         log_message(LOG_FILE, LOG_CRITICAL, "Error while create file on server");
-        close(f);
+        fclose(f);
         return;
     }
 
@@ -103,7 +103,7 @@ void download(int cfd, const char* command) {
     // process lost connection
     unsigned char buffer[80];
     int fileSize = -1, received = 0;
-    char* file = command + 9;
+    const char* file = command + 9;
 
     // send command to server && check that file exists
     write(cfd, command, sizeof(command));
