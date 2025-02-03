@@ -7,6 +7,7 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
+    start_log(LOG_FILE);
     run(argv[1]);
     return 0;
 }

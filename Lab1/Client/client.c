@@ -9,17 +9,16 @@ void run(const char* server) {
     start_client(&cfd, server);
 
     while (1) {
-        
+        printf("> ");
         fgets(command, sizeof(command), stdin);
-        if (strcmp(command, "UPLOAD") == 0) {
-            //char* file = command + 7;
+        command[strlen(command) - 1] = '\0';
+        if (strstr(command, "UPLOAD") != NULL) {
             upload(cfd, command);
         }
-        else if (strcmp(command, "DOWNLOAD") == 0) {
-            //char* file = command + 9;
+        else if (strstr(command, "DOWNLOAD") != NULL) {
             download(cfd, command);
         }
-        else if (strcmp(command, "QUIT") == 0)
+        else if (strcmp(command, "QUIT") == 0) // send to server
             break;
     }
 
@@ -38,7 +37,6 @@ void start_client(int* cfd, const char* serverName) {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(8080);
     bcopy((char*)server->h_addr_list[0], (char*)&addr.sin_addr.s_addr, server->h_length);
-    printf("fuck1");
 
     *cfd = socket(AF_INET, SOCK_STREAM, 0);
     if (*cfd == -1) {
@@ -49,10 +47,9 @@ void start_client(int* cfd, const char* serverName) {
     log_message(LOG_FILE, LOG_INFO, "Open client socket");
 
     struct timeval timeout;
-    timeout.tv_sec = 1;
+    timeout.tv_sec = 3;
     timeout.tv_usec = 0;
     setsockopt(*cfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-    printf("fuck2");
 
     while (connect(*cfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         if (errno == ENOENT) {
@@ -80,8 +77,8 @@ void upload(int cfd, const char* command) {
         fclose(f);
         return;
     }
-
-    write(cfd, command, sizeof(command));
+    
+    write(cfd, command, strlen(command) + 1);
     if (read(cfd, &fileSize, sizeof(fileSize)) >= 0 && fileSize == -1) {
         log_message(LOG_FILE, LOG_CRITICAL, "Error while create file on server");
         fclose(f);
@@ -93,8 +90,10 @@ void upload(int cfd, const char* command) {
     rewind(f);
     write(cfd, &fileSize, sizeof(fileSize));
 
-    while (sent < fileSize && (sent += fread(buffer, 1, sizeof(buffer), f))) {
-        write(cfd, buffer, sizeof(buffer));
+    int read;
+    while (sent < fileSize && (read = fread(buffer, 1, 80, f))) {
+        write(cfd, buffer, read);
+        sent += read;
         // display persantage and amount of sent bytes
     }
 
@@ -111,7 +110,7 @@ void download(int cfd, const char* command) {
     const char* file = command + 9;
 
     // send command to server && check that file exists
-    write(cfd, command, sizeof(command));
+    write(cfd, command, strlen(command) + 1);
     if (read(cfd, &fileSize, sizeof(fileSize)) >= 0 && fileSize == -1) {
         log_message(LOG_FILE, LOG_ERROR, "No such file on server");
         return;
@@ -127,8 +126,11 @@ void download(int cfd, const char* command) {
 
     read(cfd, &fileSize, sizeof(fileSize));
 
-    while (received < fileSize && (received += read(cfd, buffer, sizeof(buffer))))
-        fwrite(buffer, sizeof(unsigned char), sizeof(buffer), f);
+    int rec;
+    while (received < fileSize && (rec = read(cfd, buffer, sizeof(buffer)))) {
+        fwrite(buffer, sizeof(unsigned char), rec, f);
+        received += rec;
+    }
         // print percantage and amount of bytes
 
     log_message(LOG_FILE, LOG_INFO, "Server's data successfully received");
