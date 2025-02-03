@@ -18,6 +18,7 @@ void run() {
 
     while (1) {
         
+        printf("fuck0");
         cfd = accept(sfd, (struct sockaddr*)&clientAddr, &clientLen);
         if (cfd == -1 && !(errno == EWOULDBLOCK || errno == EAGAIN)) {
             log_message(LOG_FILE, LOG_CRITICAL, "Accept client error");
@@ -28,6 +29,7 @@ void run() {
             log_message(LOG_FILE, LOG_INFO, "Accept client connection"); // write also client addr??
             process_client(cfd);
         }
+        printf("fuck1");
 
         if (fgets(command, sizeof(command), stdin))  {
             if (strcmp(command, "ECHO") == 0)
@@ -37,6 +39,7 @@ void run() {
             else if (strcmp(command, "QUIT") == 0)
                 break;
         }
+        printf("fuck2");
     }
 
     log_message(LOG_FILE, LOG_INFO, "Stop server work");

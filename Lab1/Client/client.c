@@ -33,10 +33,12 @@ void start_client(int* cfd, const char* serverName) {
     struct sockaddr_in addr;
     
     server = gethostbyname(serverName);
+    log_message(LOG_FILE, LOG_INFO, "Get host by name");
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(8080);
     bcopy((char*)server->h_addr_list[0], (char*)&addr.sin_addr.s_addr, server->h_length);
+    printf("fuck1");
 
     *cfd = socket(AF_INET, SOCK_STREAM, 0);
     if (*cfd == -1) {
@@ -44,11 +46,13 @@ void start_client(int* cfd, const char* serverName) {
         close(*cfd);
         exit(errno);
     }
+    log_message(LOG_FILE, LOG_INFO, "Open client socket");
 
     struct timeval timeout;
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
     setsockopt(*cfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    printf("fuck2");
 
     while (connect(*cfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         if (errno == ENOENT) {
@@ -60,6 +64,7 @@ void start_client(int* cfd, const char* serverName) {
             exit(errno);
         }
     }
+    log_message(LOG_FILE, LOG_INFO, "Connect to server");
 }
 
 void upload(int cfd, const char* command) {
