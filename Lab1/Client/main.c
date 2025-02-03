@@ -1,7 +1,12 @@
 #include "client.h"
 
-int main() {
+int main(int argc, char* argv[]) {
 
-    run();
+    if (argc < 2) {
+        log_message(LOG_FILE, LOG_CRITICAL, "Server address not specified");
+        exit(-1);
+    }
+
+    run(argv[1]);
     return 0;
 }
