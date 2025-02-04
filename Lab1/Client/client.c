@@ -1,8 +1,12 @@
 #include "client.h"
 
+SETTINGS* settings;
+
 void run(const char* server) {
     
     log_message(LOG_FILE, LOG_INFO, "Start client work");
+
+    settings = init_settings();
 
     char command[80];
     int cfd;
@@ -11,12 +15,15 @@ void run(const char* server) {
     while (1) {
         printf("> ");
         fgets(command, sizeof(command), stdin);
-        command[strlen(command) - 1] = '\0';
+            command[strlen(command) - 1] = '\0';
         if (strstr(command, "UPLOAD") != NULL) {
             upload(cfd, command);
         }
         else if (strstr(command, "DOWNLOAD") != NULL) {
             download(cfd, command);
+        }
+        else if(strstr(command, "SETTINGS") != NULL) {
+            settings_command(command); 
         }
         else if (strcmp(command, "QUIT") == 0) // send to server
             break;
@@ -64,17 +71,20 @@ void start_client(int* cfd, const char* serverName) {
     log_message(LOG_FILE, LOG_INFO, "Connect to server");
 }
 
-void upload(int cfd, const char* command) {
+void upload(int cfd, char* command) {
 
     log_message(LOG_FILE, LOG_INFO, "Start upload file to server");
     unsigned char buffer[80];
     int fileSize = -1, sent = 0, bytesRead;
-    const char* file = command + 7;
 
-    FILE* f = fopen(file, "rb");
+    const char* filePath = command + 7;
+    if(is_absolute_path(filePath) != 1) {
+        filePath = get_file_path(settings->file_path, filePath);
+    } 
+
+    FILE* f = fopen(filePath, "rb");
     if (f == NULL) {
         log_message(LOG_FILE, LOG_CRITICAL, "Can't open file to send data to server");
-        fclose(f);
         return;
     }
     
@@ -116,7 +126,9 @@ void download(int cfd, const char* command) {
         return;
     }
 
-    FILE* f = fopen(file, "wb");
+    char* fileName = get_filename(file);
+    char* filePath = get_file_path(settings->file_path, fileName);
+    FILE* f = fopen(filePath, "wb");
     if (f == NULL) {
         log_message(LOG_FILE, LOG_ERROR, "Can't create file to receive data from server");
         fclose(f);
@@ -135,4 +147,32 @@ void download(int cfd, const char* command) {
 
     log_message(LOG_FILE, LOG_INFO, "Server's data successfully received");
     fclose(f);
+    free(fileName);
+    free(filePath);
+}
+
+void settings_command(char* command) {
+    if(strstr(command, ".path") != 0) {
+        char* start_i = strchr(command, ' ');
+        if(start_i == NULL) 
+            return;
+
+        int last_i = strlen(command) - 1;
+
+        while(*(++start_i) == ' ');
+ 
+        char dir[MAX_PATH_SIZE];
+        if(*start_i == '"' && command[last_i] == '"') {
+            start_i++; last_i--; 
+            strncpy(dir, start_i, strlen(start_i));
+            dir[strlen(start_i) - 1] = '\0';
+        } else { 
+            strcpy(dir, start_i);
+        }
+        
+        settings_cmd(settings, SET_PATH, dir);
+
+    } else if(strcmp(command, "SETTINGS") == 0) { 
+        settings_cmd(settings, SETTINGS_LIST, NULL);
+    }
 }

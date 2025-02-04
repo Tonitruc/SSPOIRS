@@ -8,8 +8,11 @@
 #include <sys/time.h>
 #include <string.h>
 #include "../logger.h"
+#include "../settings.h"
 
 #define LOG_FILE "client_log.txt"
+
+extern SETTINGS* settings;
 
 // TCP
 // command: UPLOAD, DOWNLOAD, CONNECT, DISCONNECT
@@ -17,7 +20,8 @@
 // received data pecsantage
 // log file
 
-void run();
+void run(); 
 void start_client(int* cfd, const char* serverName);
-void upload(int cfd, const char* file);
+void upload(int cfd, char* file);
 void download(int cfd, const char* file);
+void settings_command(char* command);
