@@ -167,8 +167,41 @@ void send_data(int cfd, const char* file) {
     while (sent < fileSize && (read = fread(buffer, 1, sizeof(buffer), f))) {
         write(cfd, buffer, read);
         sent += read;
+
+        printf("\033[2K\r");
+        int p = (sent / fileSize) * 100;
+        if (p <= 10)
+            printf("[#         ] %d%%", p);
+        else if (p > 10 && p <= 20)
+            printf("[##        ] %d%%", p);
+        else if (p > 20 && p <= 30)
+            printf("[###       ] %d%%", p);            
+        else if (p > 30 && p <= 40)
+            printf("[####      ] %d%%", p);
+        else if (p > 40 && p <= 50)
+            printf("[#####     ] %d%%", p);
+        else if (p > 50 && p <= 60)
+            printf("[######    ] %d%%", p);            
+        else if (p > 60 && p <= 70)
+            printf("[#######   ] %d%%", p);
+        else if (p > 70 && p <= 80)
+            printf("[########  ] %d%%", p);
+        else if (p > 80 && p <= 90)
+            printf("[######### ] %d%%", p);
+        else if (p > 90)
+            printf("[##########] %d%%", p); 
+        fflush(stdout);
+        // printf("\033[2K\r[");
+        // for (int i = 0; i < (sent / fileSize) * 100; i++)
+        //     printf("#");
+        // for (int i = (sent / fileSize) * 100; i < 100; i++)
+        //     printf(" ");
+        // printf("] %d%%", (sent / fileSize) * 100);
+        // fflush(stdout);
+        // usleep(500000);
         // display persantage and amount of sent bytes
     }
+    printf("\n> ");
 
     log_message(LOG_FILE, LOG_INFO, "Data successfully sent to client");
     fclose(f);
