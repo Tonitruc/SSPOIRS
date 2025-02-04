@@ -39,7 +39,10 @@ void run() {
                 server_time();
             else if (strcmp(command, "QUIT") == 0)
                 break;
-            printf("> ");
+            else if(strcmp(command, "MHIF") == 0) {
+                mhif_command();
+            }
+             printf("> ");
         }
     }
 
@@ -187,4 +190,100 @@ void server_time() {
         timeInfo->tm_mday, timeInfo->tm_mon + 1, timeInfo->tm_year + 1900,
         timeInfo->tm_hour, timeInfo->tm_min, timeInfo->tm_sec);
     log_message(LOG_FILE, LOG_INFO, "Process command TIME");
+}
+
+//___________________ MINF ________________________________
+// need packages << libcurl4-openssl-dev libmpg123-dev >>
+
+
+
+size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    return fwrite(ptr, size, nmemb, stream);
+}
+
+void mhif_command() {
+    CURL *curl;
+    FILE *fp;
+    CURLcode res;
+    const char *url = "https://drive.google.com/uc?export=download&id=17Toso8JcPQpizFuicb9AbBSGzvD2mqev"; 
+    const char *outfilename = "dechland.mp3";
+
+    // Инициализация curl
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl = curl_easy_init();
+
+    if (curl) {
+        fp = fopen(outfilename, "wb");
+        if (!fp) {
+            fprintf(stderr, "Не удалось открыть файл для записи\n");
+            return;
+        }
+
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        
+        res = curl_easy_perform(curl);
+        
+        fclose(fp);
+        
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            curl_easy_cleanup(curl);
+            return;
+        }
+        
+        curl_easy_cleanup(curl);
+    }
+
+    play_mp3(outfilename);
+}
+
+void play_mp3(const char *filename) {
+    mpg123_handle *mh;
+    unsigned char buffer[BUFFER_SIZE];
+    size_t done;
+    int err;
+
+    // Инициализация mpg123
+    mpg123_init();
+    mh = mpg123_new(NULL, &err);
+    if (mh == NULL) {
+        fprintf(stderr, "Не удалось инициализировать mpg123: %s\n", mpg123_strerror(mh));
+        return;
+    }
+
+    // Открытие MP3 файла
+    if (mpg123_open(mh, filename) != MPG123_OK) {
+        fprintf(stderr, "Не удалось открыть MP3 файл: %s\n", mpg123_strerror(mh));
+        mpg123_delete(mh);
+        mpg123_exit();
+        return;
+    }
+
+    // Получение информации о частоте и каналах
+    long rate;
+    int channels, encoding;
+    mpg123_getformat(mh, &rate, &channels, &encoding);
+
+    // Инициализация ALSA
+    snd_pcm_t *pcm_handle;
+    snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
+    snd_pcm_set_params(pcm_handle, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, channels, rate, 1, 500000);
+
+    // Воспроизведение MP3
+    while ((err = mpg123_read(mh, buffer, BUFFER_SIZE, &done)) == MPG123_OK) {
+        snd_pcm_sframes_t frames = snd_pcm_writei(pcm_handle, buffer, done / (2 * channels)); // 2 байта на канал
+        if (frames < 0) {
+            frames = snd_pcm_recover(pcm_handle, frames, 0);
+        }
+    }
+
+    // Освобождение ресурсов
+    snd_pcm_drain(pcm_handle);
+    snd_pcm_close(pcm_handle);
+    mpg123_close(mh);
+    mpg123_delete(mh);
+    mpg123_exit();
 }

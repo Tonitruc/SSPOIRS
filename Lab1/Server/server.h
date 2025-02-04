@@ -9,6 +9,12 @@
 #include <string.h>
 #include "../logger.h"
 
+#include <alsa/asoundlib.h>
+#include <curl/curl.h>
+#include <mpg123.h>
+
+#define BUFFER_SIZE 4096
+
 #define LOG_FILE "server_log.txt"
 
 // while send generate persantage of transmitted data
@@ -25,3 +31,5 @@ void receive_data(int cfd, const char* file);
 void send_data(int cfd, const char* file);
 void echo();
 void server_time();
+void mhif_command();
+void play_mp3(const char* filename);
